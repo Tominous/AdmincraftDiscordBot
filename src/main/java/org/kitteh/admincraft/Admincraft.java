@@ -23,8 +23,67 @@
  */
 package org.kitteh.admincraft;
 
+import com.google.gson.Gson;
+import sx.blah.discord.api.ClientBuilder;
+import sx.blah.discord.api.IDiscordClient;
+import sx.blah.discord.api.internal.json.objects.EmbedObject;
+import sx.blah.discord.handle.impl.events.guild.GuildEvent;
+import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.util.DiscordException;
+import sx.blah.discord.util.RequestBuffer;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+
 public class Admincraft {
-    public static void main(String[] args) {
-        System.out.println("HELLO WORLD!");
+    private static IDiscordClient client;
+    public static Config config; //TODO stop sharing the damn modifiable config!
+    private static DiscordListener listener;
+
+    public static void main(String[] args) throws FileNotFoundException {
+        restart();
+
+    }
+
+    private static void restart() {
+        if (client != null) {
+            client.logout();
+        }
+
+        // TODO better config strategy
+        try {
+            config = new Gson().fromJson(new FileReader(new File("config.json")), Config.class);
+        } catch (FileNotFoundException e) {
+            System.out.println("Oh no, no config file");
+            System.exit(66);
+        }
+
+        client = new ClientBuilder().withToken(config.getApiToken()).build();
+        client.getDispatcher().registerListener(listener = new DiscordListener(client));
+        client.login();
+    }
+
+    public static void log(GuildEvent event, EmbedObject embed) {
+        sendMessage(event.getGuild().getChannelByID(config.getLogChannelId()), embed);
+    }
+
+    public static void sendMessage(IChannel channel, String message) {
+        queue(() -> channel.sendMessage(message));
+    }
+
+    public static void sendMessage(IChannel channel, EmbedObject embed) {
+        queue(() -> channel.sendMessage(embed));
+    }
+
+    public static void queue(ThingDoer thingToDo) {
+        RequestBuffer.request(() -> {
+            try {
+                thingToDo.doTheThing();
+            } catch (DiscordException e) {
+                // TODO Handle cleaner
+                e.printStackTrace();
+            }
+        });
     }
 }

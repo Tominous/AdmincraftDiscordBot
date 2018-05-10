@@ -25,6 +25,8 @@ package org.kitteh.admincraft;
 
 import com.google.gson.GsonBuilder;
 
+import java.util.UUID;
+
 /**
  * Config class! Woo
  */
@@ -32,11 +34,26 @@ public class Config {
     // TODO  better config strategy.
 
     private String apiToken;
+    private UUID deviceId = UUID.randomUUID();
     private long logChannelId;
     private String name;
+    private String redditClientId;
+    private String redditClientSecret;
 
     public String getApiToken() {
         return this.apiToken;
+    }
+
+    public UUID getDeviceId() {
+        return this.deviceId;
+    }
+
+    public String getRedditClientId() {
+        return this.redditClientId;
+    }
+
+    public String getRedditClientSecret() {
+        return this.redditClientSecret;
     }
 
     public long getLogChannelId() {
@@ -47,6 +64,7 @@ public class Config {
         return this.name;
     }
 
+    // This is just a cute little helper to make yourself a fresh config
     public static void main(String[] args) {
         System.out.println(new GsonBuilder().serializeNulls().setPrettyPrinting().create().toJson(new Config()));
     }

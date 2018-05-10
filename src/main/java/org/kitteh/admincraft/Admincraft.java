@@ -43,7 +43,6 @@ public class Admincraft {
 
     public static void main(String[] args) throws FileNotFoundException {
         restart();
-
     }
 
     private static void restart() {

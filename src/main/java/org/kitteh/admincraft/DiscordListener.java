@@ -24,10 +24,12 @@
 package org.kitteh.admincraft;
 
 import sx.blah.discord.api.events.EventSubscriber;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageSendEvent;
 import sx.blah.discord.handle.impl.events.guild.member.NicknameChangedEvent;
 import sx.blah.discord.handle.impl.events.guild.member.UserJoinEvent;
 import sx.blah.discord.handle.impl.events.guild.member.UserLeaveEvent;
 import sx.blah.discord.handle.impl.events.shard.LoginEvent;
+import sx.blah.discord.handle.impl.obj.ReactionEmoji;
 import sx.blah.discord.handle.obj.ActivityType;
 import sx.blah.discord.handle.obj.StatusType;
 import sx.blah.discord.util.EmbedBuilder;
@@ -45,6 +47,14 @@ public class DiscordListener {
     public void login(LoginEvent event) {
         Admincraft.queue(() -> event.getClient().changeUsername(Admincraft.config.getName()));
         Admincraft.queue(() -> event.getClient().changePresence(StatusType.ONLINE, ActivityType.WATCHING, "you!"));
+    }
+
+    @EventSubscriber
+    public void message(MessageSendEvent event) {
+        if (event.getChannel().getLongID() == Admincraft.config.getPostChannelId()) {
+            Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getGuild().getEmojiByName("upvote"))));
+            Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getGuild().getEmojiByName("downvote"))));
+        }
     }
 
     @EventSubscriber

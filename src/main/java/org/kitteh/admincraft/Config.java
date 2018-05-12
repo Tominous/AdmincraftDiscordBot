@@ -36,6 +36,8 @@ public class Config {
     private String apiToken;
     private UUID deviceId = UUID.randomUUID();
     private long logChannelId;
+    private long postChannelId;
+    private String dbPass;
     private String name;
     private String redditClientId;
     private String redditClientSecret;
@@ -48,20 +50,28 @@ public class Config {
         return this.deviceId;
     }
 
+    public long getLogChannelId() {
+        return this.logChannelId;
+    }
+
+    public long getPostChannelId() {
+        return this.postChannelId;
+    }
+
+    public String getDbPass() {
+        return this.dbPass;
+    }
+
+    public String getName() {
+        return this.name;
+    }
+
     public String getRedditClientId() {
         return this.redditClientId;
     }
 
     public String getRedditClientSecret() {
         return this.redditClientSecret;
-    }
-
-    public long getLogChannelId() {
-        return logChannelId;
-    }
-
-    public String getName() {
-        return this.name;
     }
 
     // This is just a cute little helper to make yourself a fresh config

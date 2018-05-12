@@ -24,6 +24,7 @@
 package org.kitteh.admincraft;
 
 import com.google.gson.Gson;
+import net.dean.jraw.models.Submission;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
@@ -35,19 +36,29 @@ import sx.blah.discord.util.RequestBuffer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.sql.SQLException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Admincraft {
     private static IDiscordClient client;
     public static Config config; //TODO stop sharing the damn modifiable config!
-    private static DiscordListener listener;
+    private static Database database;
+    private static Timer timer;
 
-    public static void main(String[] args) throws FileNotFoundException {
-        restart();
+    public static void main(String[] args) {
+        restartDiscord();
     }
 
-    private static void restart() {
+    private static void restartDiscord() {
         if (client != null) {
             client.logout();
+        }
+        if (database != null) {
+            database.shutdown();
+        }
+        if (timer != null) {
+            timer.cancel();
         }
 
         // TODO better config strategy
@@ -57,10 +68,34 @@ public class Admincraft {
             System.out.println("Oh no, no config file");
             System.exit(66);
         }
+        try {
+            database = new Database(config);
+        } catch (SQLException ohNo) {
+            System.out.println("Oh no, db");
+            ohNo.printStackTrace();
+            System.exit(66);
+        }
+
+        Redditor reddit = new Redditor(config);
 
         client = new ClientBuilder().withToken(config.getApiToken()).build();
-        client.getDispatcher().registerListener(listener = new DiscordListener(client));
+        client.getDispatcher().registerListener(new DiscordListener());
         client.login();
+
+        timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    for (Submission post : database.processNew(reddit.getNew())) {
+                        sendMessage(client.getChannelByID(config.getPostChannelId()), "**" + post.getAuthor() + "** writes: **" + post.getTitle() + "**\n" +
+                                "https://www.reddit.com/r/admincraft/comments/" + post.getId());
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 5000, 180000);
     }
 
     public static void log(GuildEvent event, EmbedObject embed) {

@@ -23,12 +23,13 @@
  */
 package org.kitteh.admincraft;
 
-import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.member.NicknameChangedEvent;
 import sx.blah.discord.handle.impl.events.guild.member.UserJoinEvent;
 import sx.blah.discord.handle.impl.events.guild.member.UserLeaveEvent;
 import sx.blah.discord.handle.impl.events.shard.LoginEvent;
+import sx.blah.discord.handle.obj.ActivityType;
+import sx.blah.discord.handle.obj.StatusType;
 import sx.blah.discord.util.EmbedBuilder;
 
 import java.time.LocalDateTime;
@@ -36,16 +37,14 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 
+/**
+ * Discord event listening.
+ */
 public class DiscordListener {
-    private final IDiscordClient client;
-
-    public DiscordListener(IDiscordClient client) {
-        this.client = client;
-    }
-
     @EventSubscriber
     public void login(LoginEvent event) {
-        Admincraft.queue(() -> client.changeUsername(Admincraft.config.getName()));
+        Admincraft.queue(() -> event.getClient().changeUsername(Admincraft.config.getName()));
+        Admincraft.queue(() -> event.getClient().changePresence(StatusType.ONLINE, ActivityType.WATCHING, "you!"));
     }
 
     @EventSubscriber

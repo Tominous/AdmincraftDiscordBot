@@ -30,13 +30,22 @@ import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.GuildEvent;
 import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IRole;
+import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.DiscordException;
+import sx.blah.discord.util.MessageHistory;
 import sx.blah.discord.util.RequestBuffer;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -94,8 +103,40 @@ public class Admincraft {
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
+                try {
+                    IChannel channel = client.getChannelByID(config.getRoleChannelId());
+                    MessageHistory history = channel.getFullMessageHistory();
+                    Iterator<IMessage> it = history.iterator();
+                    while (it.hasNext()) {
+                        IMessage message = it.next();
+                        if (message.getContent().contains("Are you a ")) {
+                            String part = message.getContent().substring(message.getContent().indexOf("Are you a ") + "Are you a ".length());
+                            String roleName = part.substring(0, part.indexOf('?'));
+                            List<IRole> roles = channel.getGuild().getRolesByName(roleName);
+                            if (roles.size() == 1) {
+                                IRole role = roles.get(0);
+                                List<IUser> usersInRole = new LinkedList<>(role.getGuild().getUsersByRole(role));
+                                Set<IUser> usersWantingRole = new HashSet<>();
+                                message.getReactions().forEach(reaction -> usersWantingRole.addAll(reaction.getUsers()));
+
+                                for (IUser user : usersWantingRole) {
+                                    if (!usersInRole.contains(user)) {
+                                        queue(() -> user.addRole(role));
+                                    }
+                                }
+                                for (IUser user : usersInRole) {
+                                    if (!usersWantingRole.contains(user)) {
+                                        queue(() -> user.removeRole(role));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-        }, 5000, 180000);
+        }, 5000, 60000);
     }
 
     public static void log(GuildEvent event, EmbedObject embed) {

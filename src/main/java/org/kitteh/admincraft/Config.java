@@ -35,7 +35,9 @@ public class Config {
 
     private String apiToken;
     private UUID deviceId = UUID.randomUUID();
+    private long debugChannelId;
     private long logChannelId;
+    private long roleChannelId;
     private long postChannelId;
     private String dbPass;
     private String name;
@@ -50,8 +52,16 @@ public class Config {
         return this.deviceId;
     }
 
+    public long getDebugChannelId() {
+        return this.debugChannelId;
+    }
+
     public long getLogChannelId() {
         return this.logChannelId;
+    }
+
+    public long getRoleChannelId() {
+        return this.roleChannelId;
     }
 
     public long getPostChannelId() {

@@ -25,6 +25,7 @@ package org.kitteh.admincraft;
 
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageSendEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
 import sx.blah.discord.handle.impl.events.guild.member.NicknameChangedEvent;
 import sx.blah.discord.handle.impl.events.guild.member.UserJoinEvent;
 import sx.blah.discord.handle.impl.events.guild.member.UserLeaveEvent;
@@ -53,6 +54,14 @@ public class DiscordListener {
     public void message(MessageSendEvent event) {
         if (event.getChannel().getLongID() == Admincraft.config.getPostChannelId()) {
             Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getGuild().getEmojiByName("upvote"))));
+        }
+    }
+
+    @EventSubscriber
+    public void react(ReactionAddEvent event) {
+        if (event.getChannel().getLongID() == Admincraft.config.getPostChannelId() &&
+                event.getUser().equals(event.getClient().getOurUser()) &&
+                event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName("upvote")))) {
             Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getGuild().getEmojiByName("downvote"))));
         }
     }

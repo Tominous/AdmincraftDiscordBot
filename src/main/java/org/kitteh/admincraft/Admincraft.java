@@ -100,7 +100,7 @@ public class Admincraft {
                         sendMessage(client.getChannelByID(config.getPostChannelId()), "**" + post.getAuthor() + "** writes: **" + post.getTitle() + "**\n" +
                                 "https://www.reddit.com/r/admincraft/comments/" + post.getId());
                     }
-                } catch (SQLException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
                 try {

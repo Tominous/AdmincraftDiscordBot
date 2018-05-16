@@ -120,12 +120,12 @@ public class Admincraft {
                                 message.getReactions().forEach(reaction -> usersWantingRole.addAll(reaction.getUsers()));
 
                                 for (IUser user : usersWantingRole) {
-                                    if (!usersInRole.contains(user)) {
+                                    if (user != null && !usersInRole.contains(user)) {
                                         queue(() -> user.addRole(role));
                                     }
                                 }
                                 for (IUser user : usersInRole) {
-                                    if (!usersWantingRole.contains(user)) {
+                                    if (user != null && !usersWantingRole.contains(user)) {
                                         queue(() -> user.removeRole(role));
                                     }
                                 }

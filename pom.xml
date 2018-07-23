@@ -34,15 +34,20 @@
         </developer>
     </developers>
 
+    <contributors>
+        <contributor>
+            <name>Kieran Breeze</name>
+            <email>kieraanbreeze@gmail.com</email>
+            <roles>
+                <role>Bug fixer</role>
+            </roles>
+        </contributor>
+    </contributors>
+
     <issueManagement>
         <system>GitHub</system>
         <url>https://github.com/KittehOrg/AdmincraftDiscordBot/issues</url>
     </issueManagement>
-
-    <ciManagement>
-        <system>TravisCI</system>
-        <url>https://travis-ci.org/KittehOrg/AdmincraftDiscordBot</url>
-    </ciManagement>
 
     <scm>
         <connection>scm:git:git@github.com:KittehOrg/AdmincraftDiscordBot.git</connection>

@@ -117,13 +117,13 @@ public class DiscordListener {
 
     @EventSubscriber
     public void react(ReactionAddEvent event) {
-        if (event.getUser().equals(event.getClient().getOurUser())) {
-            return; // Hey it's me
-        }
         if (event.getChannel().getLongID() == Admincraft.config.getPostChannelId() &&
                 event.getUser().equals(event.getClient().getOurUser()) &&
                 event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(UPBOAT)))) {
             Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getGuild().getEmojiByName(DOWNBOAT))));
+        }
+        if (event.getUser().equals(event.getClient().getOurUser())) {
+            return; // Hey it's me
         }
         if (event.getChannel().getLongID() == Admincraft.config.getRoleChannelId()) {
             IChannel channel = event.getChannel();

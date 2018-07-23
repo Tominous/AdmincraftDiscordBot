@@ -24,7 +24,7 @@
 package org.kitteh.admincraft;
 
 /**
- * Does things.
+ * Does things. Basically an excuse to store non-returning tasks in a lambda expression.
  */
 @FunctionalInterface
 public interface ThingDoer {

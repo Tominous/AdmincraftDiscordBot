@@ -39,6 +39,7 @@ import java.util.List;
  * Every account on reddit is a bot except you.
  */
 public class Redditor {
+    private static final String IDENTIFICATION_PHRASE = "The narwhal bacons at midnight.";
     private final SubredditReference subreddit;
 
     /**

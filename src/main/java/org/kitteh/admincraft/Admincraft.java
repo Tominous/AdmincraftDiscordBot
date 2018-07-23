@@ -96,7 +96,7 @@ public class Admincraft {
                     e.printStackTrace();
                 }
             }
-        }, 5000, 60000);
+        }, 5000, 120000);
     }
 
     public static void log(GuildEvent event, EmbedObject embed) {

@@ -142,6 +142,10 @@ public class DiscordListener {
                         }
                     } else {
                         Admincraft.queue(() -> user.addRole(role));
+                        IRole admincraftRole = event.getGuild().getRoleByID(ADMINCRAFT_ROLE);
+                        if (!user.getRolesForGuild(event.getGuild()).contains(admincraftRole)) {
+                            Admincraft.queue(() -> user.addRole(admincraftRole));
+                        }
                     }
                     Admincraft.queue(() -> event.getMessage().removeReaction(user, TOOT_TOOT));
                 }

@@ -24,6 +24,7 @@
 package org.kitteh.admincraft;
 
 import com.google.gson.Gson;
+import net.dean.jraw.ApiException;
 import net.dean.jraw.models.Submission;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
@@ -39,6 +40,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -46,6 +48,7 @@ public class Admincraft {
     private static IDiscordClient client;
     public static Config config; //TODO stop sharing the damn modifiable config!
     private static Database database;
+    private static Redditor reddit;
     private static Timer timer;
 
     public static void main(String[] args) {
@@ -78,7 +81,7 @@ public class Admincraft {
             System.exit(66);
         }
 
-        Redditor reddit = new Redditor(config);
+        reddit = new Redditor(config);
 
         client = new ClientBuilder().withToken(config.getApiToken()).build();
         client.getDispatcher().registerListener(new DiscordListener());
@@ -89,7 +92,15 @@ public class Admincraft {
             @Override
             public void run() {
                 try {
-                    for (Submission post : database.processNew(reddit.getNew())) {
+                    List<Submission> newPosts;
+                    try {
+                        newPosts = reddit.getNew();
+                    } catch (ApiException ohNo) {
+                        reddit = new Redditor(config);
+                        newPosts = reddit.getNew(); // Try again, could still fail.
+                        // https://github.com/mattbdean/JRAW/issues/264
+                    }
+                    for (Submission post : database.processNew(newPosts)) {
                         String escapeAllTheTitles = post.getTitle()
                                 .replaceAll("\\*", "\\\\*")
                                 .replaceAll("_", "\\\\_")

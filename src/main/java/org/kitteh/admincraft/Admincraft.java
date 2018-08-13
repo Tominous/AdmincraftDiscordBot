@@ -110,7 +110,7 @@ public class Admincraft {
                     e.printStackTrace();
                 }
             }
-        }, 5000, 120000);
+        }, 5000, 240000);
     }
 
     public static void log(GuildEvent event, EmbedObject embed) {

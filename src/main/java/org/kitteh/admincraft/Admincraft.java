@@ -90,19 +90,21 @@ public class Admincraft {
             public void run() {
                 try {
                     for (Submission post : database.processNew(reddit.getNew())) {
-                        EmbedBuilder embed = new EmbedBuilder();
+                        String escapeAllTheTitles = post.getTitle()
+                                .replaceAll("\\*", "\\\\*")
+                                .replaceAll("_", "\\\\_")
+                                .replaceAll("~", "\\\\~")
+                                .replaceAll("`", "\\\\`");
+                        EmbedObject embed = new EmbedBuilder()
+                                .withColor(233, 38, 79)
+                                .withAuthorName(post.getAuthor() + " writes:")
+                                .withAuthorUrl("http://www.reddit.com/user/" + post.getAuthor())
+                                .withTitle(escapeAllTheTitles + "\n")
+                                .withUrl("https://www.reddit.com/r/admincraft/comments/" + post.getId())
+                                .withTimestamp(post.getCreated().toInstant())
+                                .build();
 
-                        embed.withColor(233, 38, 79);
-                        embed.withAuthorName(post.getAuthor() + " writes:");
-                        embed.withAuthorUrl("http://www.reddit.com/user/" + post.getAuthor());
-
-                        String escapeAllTheTitles = post.getTitle().replaceAll("\\*", "\\\\*").replaceAll("_", "\\\\_");
-
-                        embed.withTitle(escapeAllTheTitles + "\n");
-                        embed.withUrl("https://www.reddit.com/r/admincraft/comments/" + post.getId());
-                        embed.withTimestamp(post.getCreated().toInstant());
-
-                        sendMessage(client.getChannelByID(config.getPostChannelId()), embed.build());
+                        sendMessage(client.getChannelByID(config.getPostChannelId()), embed);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

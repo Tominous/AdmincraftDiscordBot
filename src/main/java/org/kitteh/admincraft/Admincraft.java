@@ -31,6 +31,7 @@ import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.GuildEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.util.DiscordException;
+import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RateLimitException;
 import sx.blah.discord.util.RequestBuffer;
 
@@ -89,8 +90,19 @@ public class Admincraft {
             public void run() {
                 try {
                     for (Submission post : database.processNew(reddit.getNew())) {
-                        sendMessage(client.getChannelByID(config.getPostChannelId()), "`" + post.getAuthor() + "` writes: `" + post.getTitle() + "`\n" +
-                                "https://www.reddit.com/r/admincraft/comments/" + post.getId());
+                        EmbedBuilder embed = new EmbedBuilder();
+
+                        embed.withColor(233, 38, 79);
+                        embed.withAuthorName(post.getAuthor() + " writes:");
+                        embed.withAuthorUrl("http://www.reddit.com/user/" + post.getAuthor());
+
+                        String escapeAllTheTitles = post.getTitle().replaceAll("\\*", "\\\\*").replaceAll("_", "\\\\_");
+
+                        embed.withTitle(escapeAllTheTitles + "\n");
+                        embed.withUrl("https://www.reddit.com/r/admincraft/comments/" + post.getId());
+                        embed.withTimestamp(post.getCreated().toInstant());
+
+                        sendMessage(client.getChannelByID(config.getPostChannelId()), embed.build());
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

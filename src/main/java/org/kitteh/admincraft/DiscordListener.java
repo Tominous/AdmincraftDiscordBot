@@ -113,6 +113,16 @@ public class DiscordListener {
         if (event.getChannel().getLongID() == Admincraft.config.getRoleChannelId()) {
             event.getMessage().addReaction(TOOT_TOOT);
         }
+        if (event.getChannel().getLongID() != Admincraft.config.getHalpChannelId() &&
+                event.getMessage().getRoleMentions().contains(event.getGuild().getRoleByID(Admincraft.config.getHalpRole()))) {
+            Admincraft.queue(() -> event.getAuthor().addRole(event.getGuild().getRoleByID(Admincraft.config.getHalpRole())));
+            Admincraft.queue(() -> event.getMessage().delete());
+            String content = event.getAuthor().mention() + " says:\n" + event.getMessage().getContent();
+            if (content.length() > 2000) {
+                content = content.substring(0, 2000);
+            }
+            Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getHalpChannelId()), content);
+        }
     }
 
     @EventSubscriber

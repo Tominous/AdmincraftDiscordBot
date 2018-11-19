@@ -57,7 +57,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DiscordListener {
     private static final ReactionEmoji TOOT_TOOT = ReactionEmoji.of("\uD83C\uDFBA"); // Trumpet emoji
-    private static final long ADMINCRAFT_ROLE = 470781969978884117L;
     private static final String UPBOAT = "upvote";
     private static final String DOWNBOAT = "downvote";
 
@@ -100,7 +99,7 @@ public class DiscordListener {
                     }
                 }
             }
-            IRole active = guild.getRoleByID(ADMINCRAFT_ROLE);
+            IRole active = guild.getRoleByID(Admincraft.config.getAdmincraftRole());
             List<IUser> activeUsers = guild.getUsersByRole(active);
             guild.getRoles().stream()
                     .flatMap(role -> guild.getUsersByRole(role).stream())
@@ -192,12 +191,12 @@ public class DiscordListener {
                     IRole role = roles.get(0);
                     if (event.getGuild().getUsersByRole(role).contains(user)) {
                         if (user.getRolesForGuild(event.getGuild()).stream().map(IRole::getName).filter(this.admincraftRoles::contains).count() == 1) {
-                            Admincraft.queue(() -> user.removeRole(event.getGuild().getRoleByID(ADMINCRAFT_ROLE)));
+                            Admincraft.queue(() -> user.removeRole(event.getGuild().getRoleByID(Admincraft.config.getAdmincraftRole())));
                         }
                         Admincraft.queue(() -> user.removeRole(role));
                     } else {
                         Admincraft.queue(() -> user.addRole(role));
-                        IRole admincraftRole = event.getGuild().getRoleByID(ADMINCRAFT_ROLE);
+                        IRole admincraftRole = event.getGuild().getRoleByID(Admincraft.config.getAdmincraftRole());
                         if (!user.getRolesForGuild(event.getGuild()).contains(admincraftRole)) {
                             Admincraft.queue(() -> user.addRole(admincraftRole));
                         }

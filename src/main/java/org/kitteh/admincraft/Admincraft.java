@@ -73,55 +73,60 @@ public class Admincraft {
             System.out.println("Oh no, no config file");
             System.exit(66);
         }
-        try {
-            database = new Database(config);
-        } catch (SQLException ohNo) {
-            System.out.println("Oh no, db");
-            ohNo.printStackTrace();
-            System.exit(66);
-        }
 
-        reddit = new Redditor(config);
+        boolean redditEnabled = config.shouldListenForReddit();
+        if (redditEnabled) {
+            try {
+                database = new Database(config);
+            } catch (SQLException ohNo) {
+                System.out.println("Oh no, db");
+                ohNo.printStackTrace();
+                System.exit(66);
+            }
+            reddit = new Redditor(config);
+        }
 
         client = new ClientBuilder().withToken(config.getApiToken()).build();
         client.getDispatcher().registerListener(new DiscordListener());
         client.login();
 
-        timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    List<Submission> newPosts;
+        if (redditEnabled) {
+            timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
                     try {
-                        newPosts = reddit.getNew();
-                    } catch (ApiException ohNo) {
-                        reddit = new Redditor(config);
-                        newPosts = reddit.getNew(); // Try again, could still fail.
-                        // https://github.com/mattbdean/JRAW/issues/264
-                    }
-                    for (Submission post : database.processNew(newPosts)) {
-                        String escapeAllTheTitles = post.getTitle()
-                                .replaceAll("\\*", "\\\\*")
-                                .replaceAll("_", "\\\\_")
-                                .replaceAll("~", "\\\\~")
-                                .replaceAll("`", "\\\\`");
-                        EmbedObject embed = new EmbedBuilder()
-                                .withColor(233, 38, 79)
-                                .withAuthorName(post.getAuthor() + " writes:")
-                                .withAuthorUrl("http://www.reddit.com/user/" + post.getAuthor())
-                                .withTitle(escapeAllTheTitles + "\n")
-                                .withUrl("https://www.reddit.com/r/admincraft/comments/" + post.getId())
-                                .withTimestamp(post.getCreated().toInstant())
-                                .build();
+                        List<Submission> newPosts;
+                        try {
+                            newPosts = reddit.getNew();
+                        } catch (ApiException ohNo) {
+                            reddit = new Redditor(config);
+                            newPosts = reddit.getNew(); // Try again, could still fail.
+                            // https://github.com/mattbdean/JRAW/issues/264
+                        }
+                        for (Submission post : database.processNew(newPosts)) {
+                            String escapeAllTheTitles = post.getTitle()
+                                    .replaceAll("\\*", "\\\\*")
+                                    .replaceAll("_", "\\\\_")
+                                    .replaceAll("~", "\\\\~")
+                                    .replaceAll("`", "\\\\`");
+                            EmbedObject embed = new EmbedBuilder()
+                                    .withColor(233, 38, 79)
+                                    .withAuthorName(post.getAuthor() + " writes:")
+                                    .withAuthorUrl("http://www.reddit.com/user/" + post.getAuthor())
+                                    .withTitle(escapeAllTheTitles + "\n")
+                                    .withUrl("https://www.reddit.com/r/admincraft/comments/" + post.getId())
+                                    .withTimestamp(post.getCreated().toInstant())
+                                    .build();
 
-                        sendMessage(client.getChannelByID(config.getPostChannelId()), embed);
+                            sendMessage(client.getChannelByID(config.getPostChannelId()), embed);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
-            }
-        }, 5000, 240000);
+            }, 5000, 240000);
+        }
     }
 
     public static void log(GuildEvent event, EmbedObject embed) {

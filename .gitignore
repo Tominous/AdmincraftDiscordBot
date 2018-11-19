@@ -6,3 +6,6 @@
 
 # Maven makes this!
 /target
+
+# Never commit the config with secrets
+config.json

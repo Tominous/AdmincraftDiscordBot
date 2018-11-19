@@ -34,8 +34,10 @@ public class Config {
     // TODO  better config strategy.
 
     private String apiToken;
+    private long admincraftRole;
     private UUID deviceId = UUID.randomUUID();
     private long debugChannelId;
+    private boolean disableRedditFeed;
     private long halpChannelId;
     private long halpRole;
     private long logChannelId;
@@ -48,6 +50,10 @@ public class Config {
     private String name;
     private String redditClientId;
     private String redditClientSecret;
+
+    public long getAdmincraftRole() {
+        return this.admincraftRole;
+    }
 
     public String getApiToken() {
         return this.apiToken;
@@ -99,6 +105,10 @@ public class Config {
 
     public String getName() {
         return this.name;
+    }
+
+    public boolean shouldListenForReddit() {
+        return !this.disableRedditFeed;
     }
 
     public String getRedditClientId() {

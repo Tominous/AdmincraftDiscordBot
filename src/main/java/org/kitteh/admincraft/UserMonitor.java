@@ -54,11 +54,12 @@ public class UserMonitor {
         return ++this.messages;
     }
 
-    public boolean isFlagged() {
-        if (this.messages > 2 && ((double) this.mentions / (double) this.messages) > 0.5) {
+    public boolean needsFlag() {
+        if (!this.flagged && this.messages > 2 && ((double) this.mentions / (double) this.messages) > 0.5) {
             this.flagged = true;
+            return true;
         }
-        return this.flagged;
+        return false;
     }
 
     public boolean canRemove() {

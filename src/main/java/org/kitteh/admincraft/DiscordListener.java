@@ -157,7 +157,7 @@ public class DiscordListener {
         if (monitor != null) {
             monitor.addMessage();
             monitor.addMention(event.getMessage().getMentions().size());
-            if (monitor.isFlagged()) {
+            if (monitor.needsFlag()) {
                 Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getThonkChannel()),
                         "I'm worried about " + event.getAuthor().getDisplayName(event.getGuild()) + " (" + event.getAuthor().mention() + ") - " + monitor.getMentions() + " mentions in " + monitor.getMessages() + " messages within " + monitor.getMinutes() + " minutes. Are they a spammer? Upvote to destroy, downvote if I'm wrong.");
             }
@@ -205,11 +205,15 @@ public class DiscordListener {
                 }
             }
         }
+        dance:
         if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel()) {
             if (!event.getMessage().getContent().startsWith("HANDLED") &&
                     event.getMessage().getAuthor().equals(event.getClient().getOurUser()) &&
                     !event.getMessage().getMentions().isEmpty()) {
                 IUser target = event.getMessage().getMentions().get(0);
+                if (target == null) {
+                    break dance; // Banned separately
+                }
                 boolean update = true;
                 if (event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(UPBOAT)))) {
                     Admincraft.sendMessage(event.getChannel(), "Banned user " + target.getDisplayName(event.getGuild()) + " at request of " + event.getUser().getDisplayName(event.getGuild()));

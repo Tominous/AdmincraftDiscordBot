@@ -46,8 +46,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Discord event listening.
@@ -57,6 +60,9 @@ public class DiscordListener {
     private static final long ADMINCRAFT_ROLE = 470781969978884117L;
     private static final String UPBOAT = "upvote";
     private static final String DOWNBOAT = "downvote";
+
+    private Map<Long, UserMonitor> monitor = new ConcurrentHashMap<>();
+    private List<String> admincraftRoles = new ArrayList<>();
 
     @EventSubscriber
     public void login(ShardReadyEvent event) {
@@ -76,6 +82,11 @@ public class DiscordListener {
                     List<IRole> roles = channel.getGuild().getRolesByName(roleName);
                     if (roles.size() == 1) {
                         IRole role = roles.get(0);
+                        this.admincraftRoles.add(role.getName());
+                        if (message.getReactions().isEmpty()) {
+                            Admincraft.queue(() -> message.addReaction(TOOT_TOOT));
+                            continue;
+                        }
                         for (IUser user : message.getReactionByEmoji(TOOT_TOOT).getUsers()) {
                             if (user != null && !self.equals(user)) {
                                 if (channel.getGuild().getUsersByRole(role).contains(user)) {
@@ -104,7 +115,11 @@ public class DiscordListener {
     @EventSubscriber
     public void message(MessageSendEvent event) {
         if (event.getChannel().getLongID() == Admincraft.config.getPostChannelId()) {
-            Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getGuild().getEmojiByName(UPBOAT))));
+            this.updoot(event.getMessage());
+        }
+        if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel() && event.getMessage().getContent().startsWith("I'm")) {
+            this.updoot(event.getMessage());
+            this.downdoot(event.getMessage());
         }
     }
 
@@ -122,6 +137,30 @@ public class DiscordListener {
                 content = content.substring(0, 2000);
             }
             Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getHalpChannelId()), content);
+        }
+        if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel()) {
+            IMessage message = event.getMessage();
+            if (message.getContent().startsWith("!addmember ")) {
+                if (!message.getMentions().isEmpty()) {
+                    IUser target = message.getMentions().get(0);
+                    Admincraft.sendMessage(event.getChannel(), "Added " + target.getDisplayName(event.getGuild()) + "(" + target.mention() + ") at request of " + event.getAuthor().getDisplayName(event.getGuild()) +
+                            "\nWelcome to the :thonk: channel, for handling spammers. You have been invited to help manage any incoming spammers." +
+                            "\nReact appropriately to the post by the bot." +
+                            "\nIf you have no interest in helping, go ahead and mute the channel." +
+                            "\nThis channel is just for handling spammers, and is not a cool kids club. The cool kids club is #off-topic and this channel should be only for handling spammers." +
+                            "\nAdd only folks who are active and trustworthy.");
+                    target.addRole(event.getGuild().getRoleByID(Admincraft.config.getThonkRole()));
+                }
+            }
+        }
+        UserMonitor monitor = this.getMonitor(event.getAuthor());
+        if (monitor != null) {
+            monitor.addMessage();
+            monitor.addMention(event.getMessage().getMentions().size());
+            if (monitor.isFlagged()) {
+                Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getThonkChannel()),
+                        "I'm worried about " + event.getAuthor().getDisplayName(event.getGuild()) + " (" + event.getAuthor().mention() + ") - " + monitor.getMentions() + " mentions in " + monitor.getMessages() + " messages within " + monitor.getMinutes() + " minutes. Are they a spammer? Upvote to destroy, downvote if I'm wrong.");
+            }
         }
     }
 
@@ -146,10 +185,10 @@ public class DiscordListener {
                 if (roles.size() == 1) {
                     IRole role = roles.get(0);
                     if (event.getGuild().getUsersByRole(role).contains(user)) {
-                        Admincraft.queue(() -> user.removeRole(role));
-                        if (user.getRolesForGuild(event.getGuild()).size() < 3) {
+                        if (user.getRolesForGuild(event.getGuild()).stream().map(IRole::getName).filter(this.admincraftRoles::contains).count() == 1) {
                             Admincraft.queue(() -> user.removeRole(event.getGuild().getRoleByID(ADMINCRAFT_ROLE)));
                         }
+                        Admincraft.queue(() -> user.removeRole(role));
                     } else {
                         Admincraft.queue(() -> user.addRole(role));
                         IRole admincraftRole = event.getGuild().getRoleByID(ADMINCRAFT_ROLE);
@@ -158,6 +197,26 @@ public class DiscordListener {
                         }
                     }
                     Admincraft.queue(() -> event.getMessage().removeReaction(user, TOOT_TOOT));
+                }
+            }
+        }
+        if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel()) {
+            if (!event.getMessage().getContent().startsWith("HANDLED") &&
+                    event.getMessage().getAuthor().equals(event.getClient().getOurUser()) &&
+                    !event.getMessage().getMentions().isEmpty()) {
+                IUser target = event.getMessage().getMentions().get(0);
+                boolean update = true;
+                if (event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(UPBOAT)))) {
+                    Admincraft.sendMessage(event.getChannel(), "Banned user " + target.getDisplayName(event.getGuild()) + " at request of " + event.getUser().getDisplayName(event.getGuild()));
+                    Admincraft.queue(() -> event.getGuild().banUser(target, 1));
+                } else if (event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(DOWNBOAT)))) {
+                    Admincraft.sendMessage(event.getChannel(), "No longer considering user " + target.getDisplayName(event.getGuild()) + " at request of " + event.getUser().getDisplayName(event.getGuild()));
+                } else {
+                    update = false;
+                }
+                if (update) {
+                    this.monitor.remove(target.getLongID());
+                    Admincraft.queue(() -> event.getMessage().edit("HANDLED: " + event.getMessage().getContent()));
                 }
             }
         }
@@ -170,6 +229,8 @@ public class DiscordListener {
         builder.withFooterText(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.MEDIUM).withZone(ZoneId.systemDefault()).format(event.getJoinTime()));
         builder.appendField("Joined:", event.getUser().getName(), true);
         Admincraft.log(event, builder.build());
+        this.monitor.put(event.getUser().getLongID(), new UserMonitor());
+        Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getWelcomeChannelId()), "Welcome, " + event.getUser().mention() + " :) Tell us about yourself!");
     }
 
     @EventSubscriber
@@ -179,6 +240,7 @@ public class DiscordListener {
         builder.withFooterText(LocalDateTime.now().format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.MEDIUM)));
         builder.appendField("Left:", event.getUser().getName(), true);
         Admincraft.log(event, builder.build());
+        this.monitor.remove(event.getUser().getLongID());
     }
 
     @EventSubscriber
@@ -190,5 +252,22 @@ public class DiscordListener {
         builder.appendField("Old nick:", event.getOldNickname().orElse(event.getUser().getName()), true);
         builder.appendField("New nick:", event.getNewNickname().orElse(event.getUser().getName()), true);
         Admincraft.log(event, builder.build());
+    }
+
+    private UserMonitor getMonitor(IUser user) {
+        UserMonitor monitor = this.monitor.get(user.getLongID());
+        if (monitor != null && monitor.canRemove()) {
+            this.monitor.remove(user.getLongID());
+            monitor = null;
+        }
+        return monitor;
+    }
+
+    private void updoot(IMessage message) {
+        Admincraft.queue(() -> message.addReaction(ReactionEmoji.of(message.getGuild().getEmojiByName(UPBOAT))));
+    }
+
+    private void downdoot(IMessage message) {
+        Admincraft.queue(() -> message.addReaction(ReactionEmoji.of(message.getGuild().getEmojiByName(DOWNBOAT))));
     }
 }

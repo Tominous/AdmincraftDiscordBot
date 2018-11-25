@@ -41,6 +41,9 @@ public class Config {
     private long logChannelId;
     private long roleChannelId;
     private long postChannelId;
+    private long thonkChannel;
+    private long thonkRole;
+    private long welcomeChannelId;
     private String dbPass;
     private String name;
     private String redditClientId;
@@ -76,6 +79,18 @@ public class Config {
 
     public long getPostChannelId() {
         return this.postChannelId;
+    }
+
+    public long getThonkChannel() {
+        return this.thonkChannel;
+    }
+
+    public long getThonkRole() {
+        return this.thonkRole;
+    }
+
+    public long getWelcomeChannelId() {
+        return this.welcomeChannelId;
     }
 
     public String getDbPass() {

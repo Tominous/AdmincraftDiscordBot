@@ -130,7 +130,7 @@ public class DiscordListener {
         }
         if (event.getChannel().getLongID() != Admincraft.config.getHalpChannelId() &&
                 event.getMessage().getRoleMentions().contains(event.getGuild().getRoleByID(Admincraft.config.getHalpRole()))) {
-            if (event.getAuthor().isBot()) {
+            if (!event.getAuthor().isBot()) {
                 Admincraft.queue(() -> event.getAuthor().addRole(event.getGuild().getRoleByID(Admincraft.config.getHalpRole())));
             }
             Admincraft.queue(() -> event.getMessage().delete());

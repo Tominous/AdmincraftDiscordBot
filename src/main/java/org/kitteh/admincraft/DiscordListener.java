@@ -119,14 +119,13 @@ public class DiscordListener {
         }
         if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel() && event.getMessage().getContent().startsWith("I'm")) {
             this.updoot(event.getMessage());
-            this.downdoot(event.getMessage());
         }
     }
 
     @EventSubscriber
     public void messageReceived(MessageReceivedEvent event) {
         if (event.getChannel().getLongID() == Admincraft.config.getRoleChannelId()) {
-            event.getMessage().addReaction(TOOT_TOOT);
+            Admincraft.queue(() -> event.getMessage().addReaction(TOOT_TOOT));
         }
         if (event.getChannel().getLongID() != Admincraft.config.getHalpChannelId() &&
                 event.getMessage().getRoleMentions().contains(event.getGuild().getRoleByID(Admincraft.config.getHalpRole()))) {
@@ -171,7 +170,12 @@ public class DiscordListener {
         if (event.getChannel().getLongID() == Admincraft.config.getPostChannelId() &&
                 event.getUser().equals(event.getClient().getOurUser()) &&
                 event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(UPBOAT)))) {
-            Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getGuild().getEmojiByName(DOWNBOAT))));
+            this.downdoot(event.getMessage());
+        }
+        if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel() &&
+                event.getMessage().getContent().startsWith("I'm") &&
+                event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(UPBOAT)))) {
+            this.downdoot(event.getMessage());
         }
         if (event.getUser().equals(event.getClient().getOurUser())) {
             return; // Hey it's me

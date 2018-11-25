@@ -136,10 +136,10 @@ public class Admincraft {
         queue(() -> channel.sendMessage(embed));
     }
 
-    public static void queue(ThingDoer thingToDo) {
+    public static void queue(Runnable thingToDo) {
         RequestBuffer.request(() -> {
             try {
-                thingToDo.doTheThing();
+                thingToDo.run();
             } catch (RateLimitException e) {
                 throw e;
             } catch (DiscordException e) {

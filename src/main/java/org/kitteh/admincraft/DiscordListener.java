@@ -1,5 +1,5 @@
 /*
- * * Copyright (C) 2018 Matt Baxter http://kitteh.org
+ * * Copyright (C) 2018-2019 Matt Baxter http://kitteh.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -51,6 +51,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Discord event listening.
@@ -59,6 +61,10 @@ public class DiscordListener {
     private static final ReactionEmoji TOOT_TOOT = ReactionEmoji.of("\uD83C\uDFBA"); // Trumpet emoji
     private static final String UPBOAT = "upvote";
     private static final String DOWNBOAT = "downvote";
+    private static final String BAN = "banhammer";
+    private static final String DONTBAN = "true_love";
+
+    private static final Pattern USERID_PATTERN = Pattern.compile("\\[([0-9]+)]");
 
     private Map<Long, UserMonitor> monitor = new ConcurrentHashMap<>();
     private List<String> admincraftRoles = new ArrayList<>();
@@ -75,26 +81,21 @@ public class DiscordListener {
             IUser self = event.getClient().getOurUser();
             while (it.hasNext()) {
                 IMessage message = it.next();
-                if (message.getContent().contains("Are you a ")) {
-                    String part = message.getContent().substring(message.getContent().indexOf("Are you a ") + "Are you a ".length());
-                    String roleName = part.substring(0, part.indexOf('?'));
-                    List<IRole> roles = channel.getGuild().getRolesByName(roleName);
-                    if (roles.size() == 1) {
-                        IRole role = roles.get(0);
-                        this.admincraftRoles.add(role.getName());
-                        if (message.getReactions().isEmpty()) {
-                            Admincraft.queue(() -> message.addReaction(TOOT_TOOT));
-                            continue;
-                        }
-                        for (IUser user : message.getReactionByEmoji(TOOT_TOOT).getUsers()) {
-                            if (user != null && !self.equals(user)) {
-                                if (channel.getGuild().getUsersByRole(role).contains(user)) {
-                                    Admincraft.queue(() -> user.removeRole(role));
-                                } else {
-                                    Admincraft.queue(() -> user.addRole(role));
-                                }
-                                Admincraft.queue(() -> message.removeReaction(user, TOOT_TOOT));
+                IRole role = this.getAreYouARole(message);
+                if (role != null) {
+                    this.admincraftRoles.add(role.getName());
+                    if (message.getReactions().isEmpty()) {
+                        Admincraft.queue(() -> message.addReaction(TOOT_TOOT));
+                        continue;
+                    }
+                    for (IUser user : message.getReactionByEmoji(TOOT_TOOT).getUsers()) {
+                        if (user != null && !self.equals(user)) {
+                            if (channel.getGuild().getUsersByRole(role).contains(user)) {
+                                Admincraft.queue(() -> user.removeRole(role));
+                            } else {
+                                Admincraft.queue(() -> user.addRole(role));
                             }
+                            Admincraft.queue(() -> message.removeReaction(user, TOOT_TOOT));
                         }
                     }
                 }
@@ -117,7 +118,13 @@ public class DiscordListener {
             this.updoot(event.getMessage());
         }
         if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel() && event.getMessage().getContent().startsWith("I'm")) {
-            this.updoot(event.getMessage());
+            Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getMessage().getGuild().getEmojiByName(BAN))));
+        }
+        if (event.getChannel().getLongID() == Admincraft.config.getWelcomeChannelId() && event.getMessage().getContent().startsWith("Welcome") && !event.getMessage().getMentions().isEmpty()) {
+            IUser target = event.getMessage().getMentions().get(0);
+            if (this.monitor.containsKey(target.getLongID())) {
+                this.monitor.get(target.getLongID()).setWelcome(event.getMessageID());
+            }
         }
     }
 
@@ -159,9 +166,22 @@ public class DiscordListener {
             monitor.addMention(event.getMessage().getMentions().size());
             if (monitor.needsFlag()) {
                 Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getThonkChannel()),
-                        "I'm worried about " + event.getAuthor().getDisplayName(event.getGuild()) + " (" + event.getAuthor().mention() + ") - " + monitor.getMentions() + " mentions in " + monitor.getMessages() + " messages within " + monitor.getMinutes() + " minutes. Are they a spammer? Upvote to destroy, downvote if I'm wrong.");
+                        "I'm looking at brand new user " + event.getAuthor().getDisplayName(event.getGuild()) + " (" + event.getAuthor().mention() + "). Are they a spammer? Hammer to ban, heart to mark as safe. They haven't necessarily done anything wrong yet, so play VERY safe. [" + event.getAuthor().getLongID() + "]");
+                //        "I'm worried about " + event.getAuthor().getDisplayName(event.getGuild()) + " (" + event.getAuthor().mention() + ") - " + monitor.getMentions() + " mentions in " + monitor.getMessages() + " messages within " + monitor.getMinutes() + " minutes. Are they a spammer? Upvote to destroy, downvote if I'm wrong.");
             }
         }
+    }
+
+    private IRole getAreYouARole(IMessage message) {
+        if (message.getContent().contains("Are you a ")) {
+            String part = message.getContent().substring(message.getContent().indexOf("Are you a ") + "Are you a ".length());
+            String roleName = part.substring(0, part.indexOf('?'));
+            List<IRole> roles = message.getGuild().getRolesByName(roleName);
+            if (roles.size() == 1) {
+                return roles.get(0);
+            }
+        }
+        return null;
     }
 
     @EventSubscriber
@@ -173,37 +193,29 @@ public class DiscordListener {
         }
         if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel() &&
                 event.getMessage().getContent().startsWith("I'm") &&
-                event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(UPBOAT)))) {
-            this.downdoot(event.getMessage());
+                event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(BAN)))) {
+            Admincraft.queue(() -> event.getMessage().addReaction(ReactionEmoji.of(event.getGuild().getEmojiByName(DONTBAN))));
         }
         if (event.getUser().equals(event.getClient().getOurUser())) {
             return; // Hey it's me
         }
         if (event.getChannel().getLongID() == Admincraft.config.getRoleChannelId()) {
-            IChannel channel = event.getChannel();
             IMessage message = event.getMessage();
             IUser user = event.getUser();
-            if (message.getContent().contains("Are you a ")) {
-                String part = message.getContent().substring(message.getContent().indexOf("Are you a ") + "Are you a ".length());
-                String roleName = part.substring(0, part.indexOf('?'));
-                List<IRole> roles = channel.getGuild().getRolesByName(roleName);
-                if (roles.size() == 1) {
-                    IRole role = roles.get(0);
-                    if (event.getGuild().getUsersByRole(role).contains(user)) {
-                        if (user.getRolesForGuild(event.getGuild()).stream().map(IRole::getName).filter(this.admincraftRoles::contains).count() == 1) {
-                            Admincraft.queue(() -> user.removeRole(event.getGuild().getRoleByID(Admincraft.config.getAdmincraftRole())));
-                        }
-                        Admincraft.queue(() -> user.removeRole(role));
-                    } else {
-                        Admincraft.queue(() -> user.addRole(role));
-                        IRole admincraftRole = event.getGuild().getRoleByID(Admincraft.config.getAdmincraftRole());
-                        if (!user.getRolesForGuild(event.getGuild()).contains(admincraftRole)) {
-                            Admincraft.queue(() -> user.addRole(admincraftRole));
-                        }
-                    }
-                    Admincraft.queue(() -> event.getMessage().removeReaction(user, TOOT_TOOT));
+            IRole role = this.getAreYouARole(message);
+            if (event.getGuild().getUsersByRole(role).contains(user)) {
+                if (user.getRolesForGuild(event.getGuild()).stream().map(IRole::getName).filter(this.admincraftRoles::contains).count() == 1) {
+                    Admincraft.queue(() -> user.removeRole(event.getGuild().getRoleByID(Admincraft.config.getAdmincraftRole())));
+                }
+                Admincraft.queue(() -> user.removeRole(role));
+            } else {
+                Admincraft.queue(() -> user.addRole(role));
+                IRole admincraftRole = event.getGuild().getRoleByID(Admincraft.config.getAdmincraftRole());
+                if (!user.getRolesForGuild(event.getGuild()).contains(admincraftRole)) {
+                    Admincraft.queue(() -> user.addRole(admincraftRole));
                 }
             }
+            Admincraft.queue(() -> event.getMessage().removeReaction(user, TOOT_TOOT));
         }
         dance:
         if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel()) {
@@ -211,21 +223,55 @@ public class DiscordListener {
                     event.getMessage().getAuthor().equals(event.getClient().getOurUser()) &&
                     !event.getMessage().getMentions().isEmpty()) {
                 IUser target = event.getMessage().getMentions().get(0);
-                if (target == null) {
-                    break dance; // Banned separately
-                }
                 boolean update = true;
-                if (event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(UPBOAT)))) {
-                    Admincraft.sendMessage(event.getChannel(), "Banned user " + target.getDisplayName(event.getGuild()) + " at request of " + event.getUser().getDisplayName(event.getGuild()));
-                    Admincraft.queue(() -> event.getGuild().banUser(target, 1));
-                } else if (event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(DOWNBOAT)))) {
-                    Admincraft.sendMessage(event.getChannel(), "No longer considering user " + target.getDisplayName(event.getGuild()) + " at request of " + event.getUser().getDisplayName(event.getGuild()));
+                long l;
+                if (target == null) {
+                    Matcher matcher = USERID_PATTERN.matcher(event.getMessage().getContent());
+                    if (matcher.find()) {
+                        try {
+                            l = Long.parseLong(matcher.group(1));
+                        } catch (NumberFormatException ignored) {
+                            break dance;
+                        }
+                    } else {
+                        break dance;
+                    }
+                } else {
+                    l = target.getLongID();
+                }
+                if (event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(BAN)))) {
+                    if (target == null) {
+                        Admincraft.sendMessage(event.getChannel(), "User ID " + l + " banned. They seem to have left. Done at request of " + event.getUser().getDisplayName(event.getGuild()));
+                    } else {
+                        Admincraft.sendMessage(event.getChannel(), "Banned user " + target.getDisplayName(event.getGuild()) + " at request of " + event.getUser().getDisplayName(event.getGuild()));
+                    }
+                    Admincraft.queue(() -> event.getGuild().banUser(l, 1));
+                    this.remove(l, event.getGuild());
+                } else if (event.getReaction().getEmoji().equals(ReactionEmoji.of(event.getGuild().getEmojiByName(DONTBAN)))) {
+                    if (target == null) {
+                        Admincraft.sendMessage(event.getChannel(), "No longer considering user ID " + l + " (seem to have left) at request of " + event.getUser().getDisplayName(event.getGuild()));
+                    } else {
+                        Admincraft.sendMessage(event.getChannel(), "No longer considering user " + target.getDisplayName(event.getGuild()) + " at request of " + event.getUser().getDisplayName(event.getGuild()));
+                    }
                 } else {
                     update = false;
                 }
                 if (update) {
-                    this.monitor.remove(target.getLongID());
                     Admincraft.queue(() -> event.getMessage().edit("HANDLED: " + event.getMessage().getContent()));
+                    Admincraft.queue(() -> event.getMessage().removeAllReactions());
+                }
+            }
+        }
+    }
+
+    private void remove(long id, IGuild guild) {
+        UserMonitor monitor = this.monitor.remove(id);
+        if (monitor != null) {
+            long welcomeId = monitor.getWelcome();
+            if (welcomeId != 0) {
+                IMessage message = guild.getMessageByID(welcomeId);
+                if (message != null) {
+                    Admincraft.queue(message::delete);
                 }
             }
         }

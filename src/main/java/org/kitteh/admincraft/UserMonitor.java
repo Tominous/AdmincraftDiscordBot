@@ -1,5 +1,5 @@
 /*
- * * Copyright (C) 2018 Matt Baxter http://kitteh.org
+ * * Copyright (C) 2018-2019 Matt Baxter http://kitteh.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,6 +28,7 @@ public class UserMonitor {
     private int mentions;
     private int messages;
     private boolean flagged;
+    private long welcome;
 
     public UserMonitor() {
         this.joinTime = System.currentTimeMillis();
@@ -55,14 +56,28 @@ public class UserMonitor {
     }
 
     public boolean needsFlag() {
-        if (!this.flagged && this.messages > 2 && ((double) this.mentions / (double) this.messages) > 0.5) {
+        if (!flagged) {
+            this.flagged = true;
+            return true;
+        } else {
+            return false;
+        }
+        /*if (!this.flagged && this.messages > 2 && ((double) this.mentions / (double) this.messages) > 0.2) {
             this.flagged = true;
             return true;
         }
-        return false;
+        return false;*/
     }
 
     public boolean canRemove() {
         return this.getMinutes() > 300;
+    }
+
+    public void setWelcome(long id) {
+        this.welcome = id;
+    }
+
+    public long getWelcome() {
+        return this.welcome;
     }
 }

@@ -23,6 +23,7 @@
  */
 package org.kitteh.admincraft;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageSendEvent;
@@ -42,11 +43,15 @@ import sx.blah.discord.handle.obj.StatusType;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.MessageHistory;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +73,7 @@ public class DiscordListener {
 
     private Map<Long, UserMonitor> monitor = new ConcurrentHashMap<>();
     private List<String> admincraftRoles = new ArrayList<>();
+    private Instant lastResponse = Instant.now();
 
     @EventSubscriber
     public void login(ShardReadyEvent event) {
@@ -133,6 +139,7 @@ public class DiscordListener {
         if (event.getChannel().getLongID() == Admincraft.config.getRoleChannelId()) {
             Admincraft.queue(() -> event.getMessage().addReaction(TOOT_TOOT));
         }
+        // HALP
         if (event.getChannel().getLongID() != Admincraft.config.getHalpChannelId() &&
                 event.getMessage().getRoleMentions().contains(event.getGuild().getRoleByID(Admincraft.config.getHalpRole()))) {
             if (!event.getAuthor().isBot()) {
@@ -144,6 +151,56 @@ public class DiscordListener {
                 content = content.substring(0, 2000);
             }
             Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getHalpChannelId()), content);
+        }
+        // Reaction
+        if (event.getMessage().getContent().startsWith("!")) {
+            String response = Admincraft.getResponse(event.getMessage().getContent().substring(1));
+            if (response != null && Duration.between(lastResponse, Instant.now()).toMillis() > 20000) {
+                Admincraft.sendMessage(event.getChannel(), response);
+                lastResponse = Instant.now();
+            }
+        }
+        out:
+        if (event.getChannel().getLongID() == Admincraft.config.getDebugChannelId()) {
+            // debug stuffs?!?
+            String message = event.getMessage().getContent();
+            if (message.toLowerCase().startsWith(";reaction")) {
+                String[] split = message.toLowerCase().split(" ");
+                if (split.length < 3) {
+                    break out;
+                }
+                switch (split[1].toLowerCase()) {
+                    case "add":
+                        if (split.length < 4) {
+                            break out;
+                        }
+                        try {
+                            Admincraft.addResponse(split[2], String.join(" ", Arrays.copyOfRange(message.split(" "), 3, split.length)));
+                            this.updoot(event.getMessage());
+                        } catch (IOException e) {
+                            this.downdoot(event.getMessage());
+                            Admincraft.sendMessage(event.getChannel(), ExceptionUtils.getStackTrace(e));
+                        }
+                        break;
+                    case "del":
+                    case "remove":
+                    case "delete":
+                        try {
+                            if (Admincraft.removeResponse(split[2])) {
+                                this.updoot(event.getMessage());
+                                Admincraft.sendMessage(event.getChannel(), "Deleted `" + split[2] + "`");
+                            } else {
+                                this.downdoot(event.getMessage());
+                                Admincraft.sendMessage(event.getChannel(), "But it doesn't exist...");
+                            }
+                        } catch (IOException e) {
+                            this.downdoot(event.getMessage());
+                            Admincraft.sendMessage(event.getChannel(), ExceptionUtils.getStackTrace(e));
+                        }
+                        break;
+
+                }
+            }
         }
         if (event.getChannel().getLongID() == Admincraft.config.getThonkChannel()) {
             IMessage message = event.getMessage();

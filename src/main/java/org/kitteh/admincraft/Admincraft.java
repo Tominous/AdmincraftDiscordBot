@@ -24,6 +24,7 @@
 package org.kitteh.admincraft;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import net.dean.jraw.ApiException;
 import net.dean.jraw.models.Submission;
 import sx.blah.discord.api.ClientBuilder;
@@ -39,8 +40,15 @@ import sx.blah.discord.util.RequestBuffer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -50,9 +58,36 @@ public class Admincraft {
     private static Database database;
     private static Redditor reddit;
     private static Timer timer;
+    private static Gson gson = new Gson();
+    private static Path responsesPath;
+    private static Map<String, String> responses;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        File responsesFile = new File("responses.json");
+        if (!responsesFile.exists()) {
+            responsesFile.createNewFile();
+        }
+        Type stringStringMap = new TypeToken<Map<String, String>>() {
+        }.getType();
+        responsesPath = responsesFile.toPath();
+        Map<String, String> fromJson = gson.fromJson(new String(Files.readAllBytes(responsesPath), StandardCharsets.UTF_8), stringStringMap);
+        responses = fromJson == null ? new HashMap<>() : new HashMap<>(fromJson);
         restartDiscord();
+    }
+
+    static String getResponse(String command) {
+        return responses.get(command.toLowerCase());
+    }
+
+    static void addResponse(String command, String response) throws IOException {
+        responses.put(command.toLowerCase(), response);
+        Files.write(responsesPath, gson.toJson(responses).getBytes(StandardCharsets.UTF_8));
+    }
+
+    static boolean removeResponse(String command) throws IOException {
+        boolean result = responses.remove(command) != null;
+        Files.write(responsesPath, gson.toJson(responses).getBytes(StandardCharsets.UTF_8));
+        return result;
     }
 
     private static void restartDiscord() {
@@ -68,7 +103,7 @@ public class Admincraft {
 
         // TODO better config strategy
         try {
-            config = new Gson().fromJson(new FileReader(new File("config.json")), Config.class);
+            config = gson.fromJson(new FileReader(new File("config.json")), Config.class);
         } catch (FileNotFoundException e) {
             System.out.println("Oh no, no config file");
             System.exit(66);

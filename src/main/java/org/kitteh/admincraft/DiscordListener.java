@@ -353,6 +353,7 @@ public class DiscordListener {
         builder.appendField("Left:", event.getUser().getName(), true);
         Admincraft.log(event, builder.build());
         this.monitor.remove(event.getUser().getLongID());
+        Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getWelcomeChannelId()), "So long, " + event.getUser().getName() + " :(");
     }
 
     @EventSubscriber

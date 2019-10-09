@@ -62,11 +62,11 @@ public class UserMonitor {
         } else {
             return false;
         }
-        /*if (!this.flagged && this.messages > 2 && ((double) this.mentions / (double) this.messages) > 0.2) {
+        if (!this.flagged && this.messages > 2 && ((double) this.mentions / (double) this.messages) > 0.2) {
             this.flagged = true;
             return true;
         }
-        return false;*/
+        return false;
     }
 
     public boolean canRemove() {

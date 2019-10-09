@@ -54,18 +54,18 @@ public class Database {
                 statement.execute("CREATE TABLE reddit_posts ( id VARCHAR(20) PRIMARY KEY NOT NULL );");
                 statement.execute("CREATE INDEX POSTS_ID_INDEX ON reddit_posts (id);");
             }
-            /*tableExists.setString(1, "responses");
+            tableExists.setString(1, "responses");
             ResultSet responsesExists = tableExists.executeQuery();
             if (!responsesExists.next()) {
                 statement.execute("CREATE TABLE responses ( id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,`command` VARCHAR(30) NOT NULL, `response` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL);");
                 statement.execute("CREATE INDEX ID_INDEX ON responses (id);");
-            }*/
+            }
             tableExists.close();
-/*
+
             ResultSet responses = statement.executeQuery("SELECT * FROM responses");
             while (responses.next()) {
 
-            }*/
+            }
         }
     }
 

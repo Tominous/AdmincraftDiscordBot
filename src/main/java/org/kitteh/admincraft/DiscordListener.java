@@ -224,7 +224,7 @@ public class DiscordListener {
             if (monitor.needsFlag()) {
                 Admincraft.sendMessage(event.getGuild().getChannelByID(Admincraft.config.getThonkChannel()),
                         "I'm looking at brand new user " + event.getAuthor().getDisplayName(event.getGuild()) + " (" + event.getAuthor().mention() + "). Are they a spammer? Hammer to ban, heart to mark as safe. They haven't necessarily done anything wrong yet, so play VERY safe. [" + event.getAuthor().getLongID() + "]");
-                //        "I'm worried about " + event.getAuthor().getDisplayName(event.getGuild()) + " (" + event.getAuthor().mention() + ") - " + monitor.getMentions() + " mentions in " + monitor.getMessages() + " messages within " + monitor.getMinutes() + " minutes. Are they a spammer? Upvote to destroy, downvote if I'm wrong.");
+                        "I'm worried about " + event.getAuthor().getDisplayName(event.getGuild()) + " (" + event.getAuthor().mention() + ") - " + monitor.getMentions() + " mentions in " + monitor.getMessages() + " messages within " + monitor.getMinutes() + " minutes. Are they a spammer? Upvote to destroy, downvote if I'm wrong.");
             }
         }
     }
